@@ -1,4 +1,7 @@
 def candidates_of_node(node):
+    if not node:
+        return [], []
+
     sequence = [(node[0], node[1])]
     l_result = []
     if len(node) > 2:
@@ -32,22 +35,25 @@ def compute_candidates(row, w2v_model):
     for sequence in candidates_of_node(deptree)[1]:
         if len(sequence) > 1:
             sequence.sort(key=lambda x: x[0])
-            l_index_sequence = [w_index for (w_index, dep_idx) in sequence]
-            set_index_sequence = set(l_index_sequence)
-            tokens_sequence = [(w2v_model.word2idx(tokens[i - 1]), i_dep) for (i, i_dep) in
-                               sequence]
 
-            if len(conditions) > 0:
-                array_hits = [sum([value * score_funct(index + 1) for index, value in
-                                   enumerate([int(i in set_index_sequence) for i in cond])])
-                              for cond in conditions]
-                score = max([2.0 * array_hits[index] / (2.0 * array_hits[index] +
-                                                        (max_hits(len(condition)) + max_hits(len(sequence)) - 2.0 *
-                                                         array_hits[index]))
-                             for index, condition in enumerate(conditions)])
+            if not [True for token in sequence if token[0] - 1 >= len(tokens)]:
+                l_index_sequence = [w_index for (w_index, dep_idx) in sequence]
+                set_index_sequence = set(l_index_sequence)
+                tokens_sequence = [(w2v_model.word2idx(tokens[i - 1]), i_dep) for (i, i_dep) in sequence]
+
+                if len(conditions) > 0:
+                    array_hits = [sum([value * score_funct(index + 1) for index, value in
+                                       enumerate([int(i in set_index_sequence) for i in cond])])
+                                  for cond in conditions]
+                    score = max([2.0 * array_hits[index] / (2.0 * array_hits[index] +
+                                                            (max_hits(len(condition)) + max_hits(len(sequence)) - 2.0 *
+                                                             array_hits[index]))
+                                 for index, condition in enumerate(conditions)])
+                else:
+                    score = 0.0
+
+                l_cand_of_deptree.append([l_index_sequence, tokens_sequence, score])
             else:
-                score = 0.0
-
-            l_cand_of_deptree.append([l_index_sequence, tokens_sequence, score])
+                print('Problem with sequence: ', sequence)
 
     return l_cand_of_deptree
