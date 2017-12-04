@@ -43,7 +43,7 @@ def fit_model(model_option, train, w2v_model):
     early_stop_callback = EarlyStopping(monitor='loss', min_delta=0.001, patience=10, verbose=1, mode='auto')
 
     start = time.time()
-    model.fit(x, y, batch_size=32, epochs=1, verbose=2, callbacks=[early_stop_callback])
+    model.fit(x, y, batch_size=32, epochs=150, verbose=2, callbacks=[early_stop_callback])
     end = time.time()
     print('Fit done! {}'.format((end - start)))
 

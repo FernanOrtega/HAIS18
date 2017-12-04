@@ -45,9 +45,7 @@ def compute_candidates(row, w2v_model):
                     array_hits = [sum([value * score_funct(index + 1) for index, value in
                                        enumerate([int(i in set_index_sequence) for i in cond])])
                                   for cond in conditions]
-                    score = max([2.0 * array_hits[index] / (2.0 * array_hits[index] +
-                                                            (max_hits(len(condition)) + max_hits(len(sequence)) - 2.0 *
-                                                             array_hits[index]))
+                    score = max([2.0 * array_hits[index] / max_hits(len(condition)) + max_hits(len(sequence))
                                  for index, condition in enumerate(conditions)])
                 else:
                     score = 0.0
