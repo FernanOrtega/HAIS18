@@ -5,7 +5,7 @@ from keras import Input
 from keras.callbacks import EarlyStopping
 from keras.engine import Model
 from keras.layers import Dense, Dropout, Bidirectional, GRU, MaxPooling1D, Conv1D, Masking, Flatten, concatenate, \
-    Embedding
+    Embedding, AveragePooling1D, AveragePooling2D, Conv2D, GlobalMaxPooling1D
 from keras.preprocessing import sequence
 
 
@@ -223,6 +223,205 @@ class ModelD(ModelBase):
 
         x2_preprocessed = np.array([[t[1]+1 for t in row] for row in x])
         x2_preprocessed = sequence.pad_sequences(x2_preprocessed, maxlen=self.maxlen, value=0)
+
+        y_preprocessed = np.array(y)
+
+        self.model.fit([x1_preprocessed, x2_preprocessed], y_preprocessed, batch_size=batch_size, epochs=epochs,
+                       verbose=verbose,
+                       callbacks=callbacks)
+
+    def predict(self, x):
+        x1_preprocessed = np.array([[t[0] for t in row] for row in x])
+        x1_preprocessed = sequence.pad_sequences(x1_preprocessed, maxlen=self.maxlen, value=-1)
+
+        x2_preprocessed = np.array([[t[1] + 1 for t in row] for row in x])
+        x2_preprocessed = sequence.pad_sequences(x2_preprocessed, maxlen=self.maxlen, value=0)
+
+        return self.model.predict([x1_preprocessed, x2_preprocessed])
+
+
+class ModelC2(ModelBase):
+    def __init__(self, wv, maxlen=50, max_num_deptag=50):
+        super().__init__(wv, maxlen, max_num_deptag)
+        wv_layer = self.wv.model.wv.get_embedding_layer()
+
+        wv_input = Input(shape=(self.maxlen,), dtype='int32')
+        wv_mask = Masking(mask_value=-1)(wv_input)
+        wv_sequences = wv_layer(wv_mask)
+
+        deptag_input = Input(shape=(self.maxlen,), dtype='int32')
+        deptag_mask = Masking(mask_value=0)(deptag_input)
+        deptag_sequences = Embedding(input_dim=max_num_deptag, output_dim=10, input_length=50)(deptag_mask)
+
+        x = concatenate([wv_sequences, deptag_sequences])
+
+        x = (Conv1D(filters=32, kernel_size=3, activation='relu'))(x)
+        x = (MaxPooling1D(pool_size=2))(x)
+        x = (Bidirectional(GRU(100, dropout=0.15)))(x)
+        x = (Dense(16))(x)
+        x = (Dropout(0.2))(x)
+        preds = (Dense(1))(x)
+        self.model = Model(inputs=[wv_input, deptag_input], outputs=preds, name='ConvBiGRUModelCLinearActivation')
+        self.compile_model()
+
+    def compile_model(self):
+        self.model.compile(loss='mean_squared_error', optimizer='sgd', metrics=['mae'])
+
+    def fit(self, x, y, batch_size, epochs, verbose, callbacks):
+        x1_preprocessed = np.array([[t[0] for t in row] for row in x])
+        x1_preprocessed = sequence.pad_sequences(x1_preprocessed, maxlen=self.maxlen, value=-1)
+
+        x2_preprocessed = np.array([[t[1] for t in row] for row in x])
+        x2_preprocessed = sequence.pad_sequences(x2_preprocessed, maxlen=self.maxlen, value=-1)
+
+        y_preprocessed = np.array(y)
+
+        self.model.fit([x1_preprocessed, x2_preprocessed], y_preprocessed, batch_size=batch_size, epochs=epochs,
+                       verbose=verbose,
+                       callbacks=callbacks)
+
+    def predict(self, x):
+        x1_preprocessed = np.array([[t[0] for t in row] for row in x])
+        x1_preprocessed = sequence.pad_sequences(x1_preprocessed, maxlen=self.maxlen, value=-1)
+
+        x2_preprocessed = np.array([[t[1] + 1 for t in row] for row in x])
+        x2_preprocessed = sequence.pad_sequences(x2_preprocessed, maxlen=self.maxlen, value=0)
+
+        return self.model.predict([x1_preprocessed, x2_preprocessed])
+
+
+class ModelE(ModelBase):
+    def __init__(self, wv, maxlen=50, max_num_deptag=50):
+        super().__init__(wv, maxlen, max_num_deptag)
+        wv_layer = self.wv.model.wv.get_embedding_layer()
+
+        wv_input = Input(shape=(self.maxlen,), dtype='int32')
+        wv_mask = Masking(mask_value=-1)(wv_input)
+        wv_sequences = wv_layer(wv_mask)
+
+        deptag_input = Input(shape=(self.maxlen,), dtype='int32')
+        deptag_mask = Masking(mask_value=0)(deptag_input)
+        deptag_sequences = Embedding(input_dim=max_num_deptag, output_dim=10, input_length=50)(deptag_mask)
+
+        x = concatenate([wv_sequences, deptag_sequences])
+
+        x = (Conv1D(filters=128, kernel_size=3, activation='relu'))(x)
+        # x = (AveragePooling1D(pool_size=3))(x)
+        x = (Dropout(0.2))(x)
+        x = (Conv1D(filters=32, kernel_size=17, activation='relu'))(x)
+        x = (Dropout(0.2))(x)
+        x = (GlobalMaxPooling1D())(x)
+        x = (Dense(16))(x)
+        x = (Dropout(0.2))(x)
+        preds = (Dense(1, activation='tanh'))(x)
+        self.model = Model(inputs=[wv_input, deptag_input], outputs=preds, name='OnlyConvolutions')
+        self.compile_model()
+
+    def compile_model(self):
+        self.model.compile(loss='mean_squared_error', optimizer='sgd', metrics=['mae'])
+
+    def fit(self, x, y, batch_size, epochs, verbose, callbacks):
+        x1_preprocessed = np.array([[t[0] for t in row] for row in x])
+        x1_preprocessed = sequence.pad_sequences(x1_preprocessed, maxlen=self.maxlen, value=-1)
+
+        x2_preprocessed = np.array([[t[1] for t in row] for row in x])
+        x2_preprocessed = sequence.pad_sequences(x2_preprocessed, maxlen=self.maxlen, value=-1)
+
+        y_preprocessed = np.array(y)
+
+        self.model.fit([x1_preprocessed, x2_preprocessed], y_preprocessed, batch_size=batch_size, epochs=epochs,
+                       verbose=verbose,
+                       callbacks=callbacks)
+
+    def predict(self, x):
+        x1_preprocessed = np.array([[t[0] for t in row] for row in x])
+        x1_preprocessed = sequence.pad_sequences(x1_preprocessed, maxlen=self.maxlen, value=-1)
+
+        x2_preprocessed = np.array([[t[1] + 1 for t in row] for row in x])
+        x2_preprocessed = sequence.pad_sequences(x2_preprocessed, maxlen=self.maxlen, value=0)
+
+        return self.model.predict([x1_preprocessed, x2_preprocessed])
+
+
+class ModelF(ModelBase):
+    def __init__(self, wv, maxlen=50, max_num_deptag=50):
+        super().__init__(wv, maxlen, max_num_deptag)
+        wv_layer = self.wv.model.wv.get_embedding_layer()
+
+        wv_input = Input(shape=(self.maxlen,), dtype='int32')
+        wv_mask = Masking(mask_value=-1)(wv_input)
+        wv_sequences = wv_layer(wv_mask)
+
+        deptag_input = Input(shape=(self.maxlen,), dtype='int32')
+        deptag_mask = Masking(mask_value=0)(deptag_input)
+        deptag_sequences = Embedding(input_dim=max_num_deptag, output_dim=10, input_length=50)(deptag_mask)
+
+        x = concatenate([wv_sequences, deptag_sequences])
+
+        x = (GRU(50, dropout=0.15))(x)
+        x = (Dense(16))(x)
+        x = (Dropout(0.2))(x)
+        preds = (Dense(1, activation='tanh'))(x)
+        self.model = Model(inputs=[wv_input, deptag_input], outputs=preds, name='OnlyRNN')
+        self.compile_model()
+
+    def compile_model(self):
+        self.model.compile(loss='mean_squared_error', optimizer='sgd', metrics=['mae'])
+
+    def fit(self, x, y, batch_size, epochs, verbose, callbacks):
+        x1_preprocessed = np.array([[t[0] for t in row] for row in x])
+        x1_preprocessed = sequence.pad_sequences(x1_preprocessed, maxlen=self.maxlen, value=-1)
+
+        x2_preprocessed = np.array([[t[1] for t in row] for row in x])
+        x2_preprocessed = sequence.pad_sequences(x2_preprocessed, maxlen=self.maxlen, value=-1)
+
+        y_preprocessed = np.array(y)
+
+        self.model.fit([x1_preprocessed, x2_preprocessed], y_preprocessed, batch_size=batch_size, epochs=epochs,
+                       verbose=verbose,
+                       callbacks=callbacks)
+
+    def predict(self, x):
+        x1_preprocessed = np.array([[t[0] for t in row] for row in x])
+        x1_preprocessed = sequence.pad_sequences(x1_preprocessed, maxlen=self.maxlen, value=-1)
+
+        x2_preprocessed = np.array([[t[1] + 1 for t in row] for row in x])
+        x2_preprocessed = sequence.pad_sequences(x2_preprocessed, maxlen=self.maxlen, value=0)
+
+        return self.model.predict([x1_preprocessed, x2_preprocessed])
+
+
+class ModelG(ModelBase):
+    def __init__(self, wv, maxlen=50, max_num_deptag=50):
+        super().__init__(wv, maxlen, max_num_deptag)
+        wv_layer = self.wv.model.wv.get_embedding_layer()
+
+        wv_input = Input(shape=(self.maxlen,), dtype='int32')
+        wv_mask = Masking(mask_value=-1)(wv_input)
+        wv_sequences = wv_layer(wv_mask)
+
+        deptag_input = Input(shape=(self.maxlen,), dtype='int32')
+        deptag_mask = Masking(mask_value=0)(deptag_input)
+        deptag_sequences = Embedding(input_dim=max_num_deptag, output_dim=10, input_length=50)(deptag_mask)
+
+        x = concatenate([wv_sequences, deptag_sequences])
+
+        x = (Bidirectional(GRU(50, dropout=0.15)))(x)
+        x = (Dense(16))(x)
+        x = (Dropout(0.2))(x)
+        preds = (Dense(1, activation='tanh'))(x)
+        self.model = Model(inputs=[wv_input, deptag_input], outputs=preds, name='OnlyBiRNN')
+        self.compile_model()
+
+    def compile_model(self):
+        self.model.compile(loss='mean_squared_error', optimizer='sgd', metrics=['mae'])
+
+    def fit(self, x, y, batch_size, epochs, verbose, callbacks):
+        x1_preprocessed = np.array([[t[0] for t in row] for row in x])
+        x1_preprocessed = sequence.pad_sequences(x1_preprocessed, maxlen=self.maxlen, value=-1)
+
+        x2_preprocessed = np.array([[t[1] for t in row] for row in x])
+        x2_preprocessed = sequence.pad_sequences(x2_preprocessed, maxlen=self.maxlen, value=-1)
 
         y_preprocessed = np.array(y)
 
