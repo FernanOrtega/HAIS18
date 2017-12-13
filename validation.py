@@ -100,7 +100,7 @@ def get_best_candidates(l_candidates):
     return result
 
 
-def evaluate(test, model, w2v_model):
+def evaluate(test, model):
 
     # line -> [tokens, deptree, conditions, candidates]
     # candidate -> [token_indexes, tokens_and_deptag, score]

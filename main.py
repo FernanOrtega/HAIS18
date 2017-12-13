@@ -1,13 +1,13 @@
 import os
 import sys
 import time
-import numpy as np
 from random import shuffle
 
-from model_factory import fit_model, get_model
+import numpy as np
 from sklearn.model_selection import KFold
 
 from candidates_creator import compute_candidates
+from model_factory import fit_model, get_model
 from validation import evaluate
 from word_vectorizer import WordEmbeddings
 
@@ -38,7 +38,7 @@ def execute_experiments(dataset, w2v_model, n_splits, model_option, output_csv_p
     for train_index, test_index in splits:
         train, test = prep_dataset[train_index], prep_dataset[test_index]
         model = fit_model(model_option, train, w2v_model)
-        results.append(evaluate(test, model, w2v_model))
+        results.append(evaluate(test, model))
 
     save_results(results, output_csv_path)
 
