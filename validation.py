@@ -61,7 +61,7 @@ def validate(l_predicted, l_expected, l_sizes):
         for k, v in d.items():
             confusion_matrix[k] += v
     confusion_matrix_t = Counter()
-    for d in l_conf_matrices:
+    for d in l_conf_matrices_t:
         for k, v in d.items():
             confusion_matrix_t[k] += v
 
